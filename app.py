@@ -11,10 +11,11 @@ from sentence_transformers import SentenceTransformer
 from transformers import CLIPProcessor, CLIPModel
 from openai import OpenAI
 import torch
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel, Field
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 import uvicorn
 from typing import List, Optional, Dict, Any
 
@@ -25,6 +26,7 @@ load_dotenv()
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
 NVIDIA_API_KEY = os.getenv("NVIDIA_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 NVIDIA_BASE_URL = os.getenv("NVIDIA_BASE_URL")
 COLLECTION_NAME = "multimodal_rag_data"
 PDF_DIRECTORY = "pdfs-data"
@@ -48,6 +50,7 @@ print("Initialization complete.")
 
 # --- FastAPI App ---
 app = FastAPI()
+templates = Jinja2Templates(directory="templates")
 
 # Ensure history directory exists
 os.makedirs(HISTORY_DIRECTORY, exist_ok=True)
@@ -56,9 +59,9 @@ os.makedirs(HISTORY_DIRECTORY, exist_ok=True)
 app.mount("/pdfs-data", StaticFiles(directory="pdfs-data"), name="pdfs-data")
 app.mount("/assets", StaticFiles(directory="assets"), name="assets")
 
-@app.get("/")
-async def read_index():
-    return FileResponse('templates/index.html')
+@app.get("/", response_class=HTMLResponse)
+async def read_index(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request, "gemini_api_key": GEMINI_API_KEY})
 
 @app.get("/plant_names.json")
 async def get_plant_names():

@@ -2003,7 +2003,7 @@
         async function getPlantDetailsFromAI(plantName) {
             openDetailsModal(plantName, '<div class="spinner-container"><div class="spinner"></div></div>');
             
-            const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+            const GEMINI_API_KEY = '{{ gemini_api_key }}';
             const model = 'gemini-1.5-flash';
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -2220,7 +2220,7 @@
                 }
 
                 // 2. Call Gemini for analysis
-                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const GEMINI_API_KEY = '{{ gemini_api_key }}';
                 const model = 'gemini-1.5-flash';
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -2359,7 +2359,7 @@
                 }
 
                 // 2. Call Gemini for prediction
-                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const GEMINI_API_KEY = '{{ gemini_api_key }}';
                 const model = 'gemini-1.5-flash';
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -2534,7 +2534,7 @@
                     throw new Error('Not enough data points to generate art.');
                 }
 
-                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const GEMINI_API_KEY = '{{ gemini_api_key }}';
                 const model = 'gemini-1.5-flash';
                 const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
 
@@ -2863,7 +2863,7 @@
             const resultCardId = `result-${fileData.id}`;
             createResultCard(resultCardId, fileData.src);
 
-            const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+            const GEMINI_API_KEY = '{{ gemini_api_key }}';
             const model = 'gemini-1.5-flash';
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
             
