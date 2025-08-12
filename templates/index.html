@@ -1,0 +1,3030 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plant Disease AI Assistant</title>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-color: #0E8059;
+            --primary-dark: #0b6b4a;
+            --secondary-color: #0E8059;
+            --bg-primary: #fafbfc;
+            --bg-secondary: #ffffff;
+            --bg-sidebar: #f8f9fc;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --text-light: #a0aec0;
+            --border-color: #e2e8f0;
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+            --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.07), 0 2px 4px rgba(0, 0, 0, 0.06);
+            --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+            --gradient: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Sidebar Styles */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-sidebar);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.3s ease;
+            z-index: 100;
+        }
+
+        .sidebar-header {
+            padding: 24px 20px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--gradient);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 700;
+            font-size: 18px;
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: var(--gradient);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .new-chat-btn {
+            width: 100%;
+            padding: 12px 16px;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .new-chat-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .new-chat-btn:active {
+            transform: translateY(0);
+        }
+
+        .chat-history {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        .chat-item {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: transparent;
+            border: 1px solid transparent;
+        }
+
+        .chat-item:hover {
+            background: var(--bg-secondary);
+            border-color: var(--border-color);
+            transform: translateX(4px);
+        }
+
+        .chat-item.active {
+            background: var(--bg-secondary);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .chat-title {
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .chat-preview {
+            font-size: 12px;
+            color: var(--text-secondary);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Mobile Menu Toggle */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1000;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 8px;
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background: var(--bg-secondary);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: 20px 24px;
+            border-bottom: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+            backdrop-filter: blur(10px);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .beta-tag {
+            background-color: #d8d8f5;
+            color: #4800ff;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 15px;
+            font-weight: 600;
+        }
+
+        .chat-title-main {
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .chat-subtitle {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 4px;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            scroll-behavior: smooth;
+        }
+
+        .message {
+            display: flex;
+            gap: 12px;
+            animation: slideIn 0.4s ease;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            font-size: 14px;
+            flex-shrink: 0;
+        }
+
+        .user-avatar {
+            background: var(--gradient);
+            color: white;
+        }
+
+        .bot-avatar {
+            background: var(--bg-primary);
+            color: var(--text-secondary);
+            border: 2px solid var(--border-color);
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 16px 20px;
+            border-radius: 20px;
+            position: relative;
+            line-height: 1.5;
+        }
+
+        .user .message-content {
+            background: var(--gradient);
+            color: white;
+            border-bottom-right-radius: 8px;
+        }
+
+        .bot .message-content {
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+            border-bottom-left-radius: 8px;
+        }
+        
+        .bot .message-content ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        .bot .message-content li {
+            margin-bottom: 5px;
+        }
+
+        .message-time {
+            font-size: 11px;
+            color: var(--text-light);
+            margin-top: 8px;
+            text-align: right;
+        }
+
+        .user .message-time {
+            color: rgba(255, 255, 255, 0.7);
+        }
+
+        /* Typing indicator */
+        .typing-indicator {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 0;
+        }
+
+        .processing-indicator-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 12px 20px;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .spinner {
+            width: 16px;
+            height: 16px;
+            border: 2px solid var(--primary-color);
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* Input Area */
+        .input-area {
+            padding: 20px 24px;
+            border-top: 1px solid var(--border-color);
+            background: var(--bg-secondary);
+        }
+
+        .input-container {
+            display: flex;
+            align-items: flex-end;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .message-input {
+            flex: 1;
+            min-height: 44px;
+            max-height: 120px;
+            padding: 12px 16px;
+            border: 1px solid var(--border-color);
+            border-radius: 22px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: none;
+            outline: none;
+            transition: all 0.2s ease;
+            background: var(--bg-primary);
+        }
+
+        .message-input:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .message-input::placeholder {
+            color: var(--text-light);
+        }
+
+        .send-button {
+            width: 44px;
+            height: 44px;
+            background: var(--gradient);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            flex-shrink: 0;
+        }
+
+        .send-button:hover {
+            transform: scale(1.05);
+            box-shadow: var(--shadow-md);
+        }
+
+        .send-button:active {
+            transform: scale(0.95);
+        }
+
+        .send-button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        /* Scrollbar Styles */
+        .chat-messages::-webkit-scrollbar,
+        .chat-history::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .chat-messages::-webkit-scrollbar-track,
+        .chat-history::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb,
+        .chat-history::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 3px;
+        }
+
+        .chat-messages::-webkit-scrollbar-thumb:hover,
+        .chat-history::-webkit-scrollbar-thumb:hover {
+            background: var(--text-light);
+        }
+
+        /* Mobile Responsive */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                transform: translateX(-100%);
+                box-shadow: var(--shadow-lg);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .mobile-menu-toggle {
+                display: block;
+            }
+
+            .main-content {
+                width: 100%;
+            }
+
+            .chat-messages {
+                padding: 16px;
+            }
+
+            .input-area {
+                padding: 16px;
+            }
+
+            .message-content {
+                max-width: 85%;
+            }
+
+            .chat-header {
+                padding-left: 60px;
+            }
+        }
+
+        /* Welcome Message */
+        .welcome-message {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .welcome-icon {
+            width: 80px;
+            height: 80px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+            font-size: 36px;
+        }
+
+        .welcome-title {
+            font-size: 24px;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .welcome-subtitle {
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .welcome-message ul {
+            list-style: none;
+            padding: 0;
+            margin-top: 20px;
+            text-align: left;
+            display: inline-block;
+        }
+
+        .welcome-message li {
+            background: var(--bg-primary);
+            padding: 12px 20px;
+            border-radius: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border-color);
+            transition: all 0.2s ease;
+        }
+
+        .welcome-message li:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-color);
+        }
+
+        .bot .message-content .response-images {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .bot .message-content .response-image {
+            width: 80px;
+            height: 80px;
+            border-radius: 10px;
+            cursor: pointer;
+            object-fit: cover;
+            border: 2px solid var(--border-color);
+            transition: transform 0.2s ease;
+        }
+
+        .bot .message-content .response-image:hover {
+            transform: scale(1.05);
+            border-color: var(--primary-color);
+        }
+
+        .bot .message-content p {
+            margin-bottom: 10px;
+        }
+        
+        .bot .message-content ul {
+            list-style-position: outside;
+            padding-left: 20px;
+        }
+
+        .bot .message-content li {
+            margin-bottom: 20px;
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .bot .message-content li > p {
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .topic-details {
+            display: flex;
+            align-items: flex-start;
+            gap: 15px;
+            padding: 12px;
+            background-color: var(--bg-primary);
+            border-radius: 10px;
+            border: 1px solid var(--border-color);
+        }
+
+        .topic-image {
+            width: 100px;
+            height: 100px;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .topic-description {
+            font-size: 0.9em;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+
+        /* Image Modal Styles */
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 1001;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.85);
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 80%;
+            max-height: 80%;
+            animation: zoomIn 0.3s ease;
+        }
+
+        @keyframes zoomIn {
+            from { transform: scale(0.8); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+            cursor: pointer;
+        }
+
+        .close-modal:hover,
+        .close-modal:focus {
+            color: #bbb;
+            text-decoration: none;
+        }
+
+        .source-link {
+            color: var(--primary-color);
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .source-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Plant Encyclopedia Styles */
+        #encyclopedia-view {
+            padding: 24px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .encyclopedia-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+        }
+
+        .encyclopedia-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .search-and-filter {
+            display: flex;
+            gap: 16px;
+        }
+
+        .search-bar {
+            display: flex;
+            align-items: center;
+            background: var(--bg-primary);
+            border-radius: 12px;
+            padding: 4px 12px;
+            border: 1px solid var(--border-color);
+            width: 300px;
+        }
+
+        .search-bar input {
+            border: none;
+            background: transparent;
+            outline: none;
+            font-size: 14px;
+            width: 100%;
+            padding: 8px;
+        }
+
+        .plant-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 24px;
+        }
+
+        .plant-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+
+        .plant-card:hover {
+            transform: translateY(-5px);
+            box-shadow: var(--shadow-lg);
+            border-color: var(--primary-color);
+        }
+
+        .plant-card-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            background-color: var(--bg-primary);
+        }
+
+        .plant-card-content {
+            padding: 16px;
+        }
+
+        .plant-card-title {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 4px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .plant-card-subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #plant-detail-view {
+            padding: 24px;
+            overflow-y: auto;
+            height: 100%;
+        }
+
+        .back-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 24px;
+            cursor: pointer;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .plant-detail-header {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+        }
+
+        .plant-detail-image {
+            width: 200px;
+            height: 200px;
+            border-radius: 16px;
+            object-fit: cover;
+            flex-shrink: 0;
+        }
+
+        .plant-detail-info h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .plant-detail-info p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 24px;
+        }
+
+        .tab-link {
+            padding: 12px 20px;
+            cursor: pointer;
+            border-bottom: 3px solid transparent;
+            font-weight: 600;
+            color: var(--text-secondary);
+            transition: all 0.2s ease;
+        }
+
+        .tab-link.active {
+            color: var(--primary-color);
+            border-bottom-color: var(--primary-color);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+        
+        .sidebar .new-chat-btn + .new-chat-btn {
+            margin-top: 10px;
+            background: var(--bg-sidebar);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        .sidebar .new-chat-btn + .new-chat-btn:hover {
+            background: var(--bg-secondary);
+            border-color: var(--primary-color);
+            box-shadow: var(--shadow-sm);
+        }
+
+        /* Disease Scanner Styles */
+        #disease-scanner-view {
+            padding: 24px;
+            overflow-y: auto;
+            height: 100%;
+            display: none;
+        }
+
+        .scanner-container {
+            max-width: 900px;
+            margin: 0 auto;
+        }
+
+        .scanner-header {
+            text-align: center;
+            margin-bottom: 32px;
+        }
+
+        .scanner-title {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--text-primary);
+        }
+
+        .scanner-subtitle {
+            font-size: 16px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        .upload-area {
+            background: var(--bg-primary);
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .upload-area:hover {
+            border-color: var(--primary-color);
+            background: #f7fdfa;
+        }
+
+        .upload-icon {
+            width: 60px;
+            height: 60px;
+            background: var(--gradient);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 20px;
+            color: white;
+        }
+
+        .upload-text {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .upload-hint {
+            font-size: 14px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+        }
+
+        #image-previews-grid {
+            margin-top: 24px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 16px;
+        }
+
+        .preview-card {
+            position: relative;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+        }
+
+        .preview-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+        }
+
+        .remove-image-btn {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0,0,0,0.6);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            line-height: 1;
+        }
+
+        .scan-button-container {
+            text-align: center;
+            margin-top: 24px;
+        }
+
+        .scan-button {
+            padding: 14px 32px;
+            background: var(--gradient);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .scan-button:hover {
+            box-shadow: var(--shadow-md);
+        }
+
+        #scanner-results-container {
+            margin-top: 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 24px;
+        }
+
+        .result-card {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            display: grid;
+            grid-template-columns: 1fr 1.2fr;
+            gap: 24px;
+            align-items: flex-start;
+            display: none; /* Hidden by default */
+        }
+
+        .result-card h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+
+        .result-image-view canvas {
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .segmentation-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .segmentation-controls button {
+            flex: 1;
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .segmentation-controls button.active,
+        .segmentation-controls button:hover {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .result-details-content {
+            font-size: 14px;
+            line-height: 1.6;
+        }
+        .result-details-content h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-top: 16px;
+            margin-bottom: 8px;
+        }
+        .result-details-content ul {
+            padding-left: 20px;
+            margin-bottom: 10px;
+        }
+
+        .spinner-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 40px;
+        }
+
+        /* GBIF Features Styles */
+        .gbif-controls {
+            display: flex;
+            gap: 16px;
+            margin-bottom: 24px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+
+        .gbif-controls .search-bar {
+            flex-grow: 1;
+            min-width: 250px;
+        }
+
+        .gbif-controls select, .gbif-controls input[type="text"] {
+            padding: 12px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-primary);
+            font-size: 14px;
+            height: 48px;
+        }
+        
+        .gbif-controls .scan-button {
+            height: 48px;
+            padding: 0 24px;
+        }
+
+        .map-container {
+            width: 100%;
+            height: 500px;
+            margin-top: 20px;
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            background-color: var(--bg-primary);
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 24px;
+        }
+
+        .result-item-card {
+            background: var(--bg-secondary);
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+            padding: 16px;
+            transition: all 0.2s ease;
+        }
+        .result-item-card:hover {
+            box-shadow: var(--shadow-md);
+            border-color: var(--primary-color);
+        }
+        .result-item-card h4 {
+            font-size: 16px;
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+        .result-item-card p {
+            font-size: 14px;
+            color: var(--text-secondary);
+            line-height: 1.5;
+        }
+        .details-button {
+            background: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 10px;
+            font-weight: 600;
+        }
+        .details-button:hover {
+            background: var(--primary-dark);
+        }
+        /* Details Modal */
+        .details-modal {
+            display: none;
+            position: fixed;
+            z-index: 1002;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.6);
+            align-items: center;
+            justify-content: center;
+        }
+        .details-modal-content {
+            background-color: var(--bg-secondary);
+            margin: auto;
+            padding: 24px;
+            border-radius: 16px;
+            width: 90%;
+            max-width: 600px;
+            max-height: 80vh;
+            overflow-y: auto;
+            animation: zoomIn 0.3s;
+        }
+        .details-modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 16px;
+            margin-bottom: 16px;
+        }
+        .details-modal-title {
+            font-size: 22px;
+            font-weight: 700;
+        }
+        .close-details-modal {
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+            color: var(--text-light);
+        }
+
+        .analysis-result-container {
+            background: var(--bg-secondary);
+            border-radius: 16px;
+            border: 1px solid var(--border-color);
+            padding: 24px;
+            margin-top: 24px;
+        }
+        .analysis-result-container h3 {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 16px;
+        }
+        .analysis-result-container p, .analysis-result-container li {
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+        .analysis-result-container ul {
+            padding-left: 20px;
+            margin-top: 10px;
+        }
+
+        .powered-by-gbif {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            text-decoration: none;
+        }
+        .powered-by-gbif span {
+            font-size: 12px;
+            font-weight: 500;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+        }
+        .powered-by-gbif img {
+            height: 30px;
+            filter: invert(20%);
+        }
+    </style>
+</head>
+<body>
+    <div class="app-container">
+        <!-- Mobile Menu Toggle -->
+        <button class="mobile-menu-toggle" onclick="toggleSidebar()">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+            </svg>
+        </button>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <div class="logo-icon">P</div>
+                    <div class="logo-text">Agri RAG</div>
+                </div>
+                <button class="new-chat-btn" onclick="startNewChat()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 5v14m-7-7h14"></path>
+                    </svg>
+                    New Chat
+                </button>
+                <button class="new-chat-btn" onclick="showPlantEncyclopedia()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
+                        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
+                    </svg>
+                    Plant Encyclopedia
+                </button>
+                <button class="new-chat-btn" onclick="showDiseaseScanner()">
+                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"></path>
+                        <circle cx="12" cy="13" r="3"></circle>
+                    </svg>
+                    Disease Scanner
+                </button>
+                <button class="new-chat-btn" onclick="showPlantMap()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+                        <circle cx="12" cy="10" r="3"></circle>
+                    </svg>
+                    Plant Map
+                </button>
+                <button class="new-chat-btn" onclick="showEndangeredWatch()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                    </svg>
+                    Endangered Watch
+                </button>
+                <button class="new-chat-btn" onclick="showGbifTools()">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+                        <polyline points="2 17 12 22 22 17"></polyline>
+                        <polyline points="2 12 12 17 22 12"></polyline>
+                    </svg>
+                    GBIF Tools
+                </button>
+            </div>
+            <div class="chat-history" id="chatHistory">
+                <!-- Chat history will be dynamically populated here -->
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <div class="main-content" id="mainContent">
+            <div id="chat-view" style="display: flex; flex-direction: column; height: 100%;">
+                <div class="chat-header">
+                    <div>
+                        <div class="chat-title-main">Plant Disease AI Assistant</div>
+                        <div class="chat-subtitle">Basics and history of plants, plus fungi, viruses, and viroids for all.</div>
+                    </div>
+                    <div class="beta-tag">Beta</div>
+                </div>
+
+                <div class="chat-messages" id="chatMessages">
+                    <div class="welcome-message">
+                        <div class="welcome-icon"><i class="material-icons" style="font-size: 48px;">auto_awesome</i></div>
+                        <div class="welcome-title">Welcome to Agri RAG</div>
+                        <div class="welcome-subtitle">I'm here to help you with any questions or tasks you might have. Start a conversation by typing a message below!</div>
+                    </div>
+                </div>
+
+                <!-- Typing Indicator -->
+                <div class="message typing-indicator" id="typingIndicator">
+                    <div class="message-avatar bot-avatar">AI</div>
+                    <div class="processing-indicator-content">
+                        <div class="spinner"></div>
+                        <span>Processing...</span>
+                    </div>
+                </div>
+
+                <div class="input-area">
+                    <div class="input-container">
+                        <textarea 
+                            class="message-input" 
+                            id="messageInput" 
+                            placeholder="Type your message here..." 
+                            rows="1"
+                            onkeypress="handleKeyPress(event)"
+                            oninput="adjustTextareaHeight()"
+                        ></textarea>
+                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <line x1="22" y1="2" x2="11" y2="13"></line>
+                                <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div id="encyclopedia-view" style="display: none;">
+                <div class="encyclopedia-header">
+                    <div style="display: flex; align-items: center; gap: 16px;">
+                        <h1 class="encyclopedia-title">Plant Encyclopedia</h1>
+                        <a href="https://perenual.com/" target="_blank" class="powered-by-gbif">
+                            <span>Powered by</span>
+                            <img src="assets/green-logo-sm.svg" alt="Perenual Logo" style="height: 24px; filter: none;">
+                        </a>
+                    </div>
+                    <div class="search-and-filter">
+                        <div class="search-bar">
+                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-light); margin-right: 8px;">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
+                            <input type="text" id="plantSearchInput" placeholder="Search for plants...">
+                        </div>
+                    </div>
+                </div>
+                <div class="plant-grid" id="plantGrid">
+                    <!-- Plant cards will be dynamically inserted here -->
+                </div>
+            </div>
+
+            <div id="plant-detail-view" style="display: none;">
+                <!-- Plant detail content will be dynamically inserted here -->
+            </div>
+
+            <div id="disease-scanner-view">
+                <div class="scanner-container">
+                    <div class="scanner-header">
+                        <h1 class="scanner-title">Plant Disease Scanner</h1>
+                        <p class="scanner-subtitle">Upload an image of a plant leaf to detect diseases using AI.</p>
+                    </div>
+
+                    <div class="upload-area" id="uploadArea" onclick="document.getElementById('imageUpload').click()">
+                        <div class="upload-icon">
+                            <i class="material-icons" style="font-size: 32px;">upload_file</i>
+                        </div>
+                        <div class="upload-text">Click to Upload Image</div>
+                        <div class="upload-hint">Or drag and drop a file here</div>
+                    </div>
+                    <input type="file" id="imageUpload" accept="image/*" style="display: none;" multiple>
+
+                    <div id="image-previews-grid"></div>
+
+                    <div class="scan-button-container" id="analyze-button-container" style="display: none;">
+                        <button class="scan-button" onclick="analyzeImages()">Analyze Images</button>
+                    </div>
+
+                    <div class="spinner-container" id="scanner-loader" style="display: none;">
+                        <div class="spinner"></div>
+                    </div>
+
+                    <div id="scanner-results-container">
+                        <!-- Analysis result cards will be dynamically inserted here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plant Map View -->
+            <div id="plant-map-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Plant Map (India)</h1>
+                    <a href="https://www.gbif.org/" target="_blank" class="powered-by-gbif">
+                        <span>Powered by</span>
+                        <img src="assets/full_logo_white.svg" alt="GBIF Logo">
+                    </a>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="plantNameInput" placeholder="Search by plant name...">
+                    </div>
+                    <select id="stateSelect">
+                        <option value="">All States / UTs</option>
+                    </select>
+                    <input type="text" id="yearRangeInput" placeholder="Year range (e.g., 2010-2024)">
+                    <select id="speciesTypeSelect">
+                        <option value="">All Species</option>
+                        <option value="native">Native</option>
+                        <option value="introduced">Introduced</option>
+                    </select>
+                    <button class="scan-button" onclick="searchPlantMap()">Search</button>
+                </div>
+                <div id="plant-map-container" class="map-container"></div>
+                <div id="occurrence-details" class="results-grid">
+                    <!-- Occurrence details will be shown here -->
+                </div>
+            </div>
+
+            <!-- Endangered Watch View -->
+            <div id="endangered-watch-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Endangered Watch (India)</h1>
+                    <a href="https://www.gbif.org/" target="_blank" class="powered-by-gbif">
+                        <span>Powered by</span>
+                        <img src="assets/full_logo_white.svg" alt="GBIF Logo">
+                    </a>
+                </div>
+                <div class="gbif-controls">
+                    <select id="threatCategorySelect">
+                        <option value="">All Threat Categories</option>
+                        <option value="CR">Critically Endangered</option>
+                        <option value="EN">Endangered</option>
+                        <option value="VU">Vulnerable</option>
+                    </select>
+                    <div class="search-bar">
+                        <input type="text" id="endangeredPlantNameInput" placeholder="Search by plant name...">
+                    </div>
+                    <select id="endangeredStateSelect">
+                        <option value="">All States / UTs</option>
+                    </select>
+                    <button class="scan-button" onclick="searchEndangeredSpecies()">Search</button>
+                </div>
+                <div id="endangered-species-map" class="map-container"></div>
+                <div id="endangered-species-list" class="results-grid">
+                    <!-- Endangered species list will be shown here -->
+                </div>
+            </div>
+
+            <!-- GBIF Tools View -->
+            <div id="gbif-tools-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">GBIF Analysis Tools</h1>
+                    <a href="https://www.gbif.org/" target="_blank" class="powered-by-gbif">
+                        <span>Powered by</span>
+                        <img src="assets/full_logo_white.svg" alt="GBIF Logo">
+                    </a>
+                </div>
+                <div class="results-grid" style="grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));">
+                    <div class="result-item-card">
+                        <h4>Climate–Plant Relationship Analysis</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Link GBIF plant records with climate datasets to model suitable habitats for different species. Understand how climate change might impact plant distribution.</p>
+                        <button class="details-button" onclick="showClimateAnalysis()">Launch Analysis</button>
+                    </div>
+                    <div class="result-item-card">
+                        <h4>Invasive Plant Watch</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Filter GBIF for alien and invasive species in your area. Set up alerts or generate reports to monitor their spread and support conservation efforts.</p>
+                        <button class="details-button" onclick="showInvasiveWatch()">Start Watch</button>
+                    </div>
+                    <div class="result-item-card">
+                        <h4>Habitat Suitability Prediction</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Train machine learning models on GBIF occurrence data to predict where certain plants could potentially grow, aiding in reintroduction or conservation planning.</p>
+                        <button class="details-button" onclick="showHabitatPrediction()">Predict Habitat</button>
+                    </div>
+                    <div class="result-item-card">
+                        <h4>Generative “bloom maps”</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Create seasonal time-lapse maps of flowering plants based on GBIF records.</p>
+                        <button class="details-button" onclick="showBloomMaps()">Create Map</button>
+                    </div>
+                    <div class="result-item-card">
+                        <h4>Botanical Data Art</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Use species shapes, colors, or distribution dots as the basis for digital artworks.</p>
+                        <button class="details-button" onclick="showDataArt()">Generate Art</button>
+                    </div>
+                    <div class="result-item-card">
+                        <h4>Historical Herbarium Recreations</h4>
+                        <p class="topic-description" style="margin-bottom: 15px;">Pair GBIF occurrence records with digitized herbarium specimen images.</p>
+                        <button class="details-button" onclick="showHerbariumRecreation()">Recreate</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Climate Analysis View -->
+            <div id="climate-analysis-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Climate-Plant Relationship Analysis</h1>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="climatePlantNameInput" placeholder="Enter plant name...">
+                    </div>
+                    <button class="scan-button" onclick="runClimateAnalysis()">Analyze</button>
+                </div>
+                <div id="climate-analysis-results" style="margin-top: 24px;">
+                    <!-- Analysis results will be shown here -->
+                </div>
+            </div>
+
+            <!-- Invasive Plant Watch View -->
+            <div id="invasive-watch-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Invasive Plant Watch (India)</h1>
+                </div>
+                <div class="gbif-controls">
+                    <select id="invasiveStateSelect">
+                        <option value="">All States / UTs</option>
+                    </select>
+                    <button class="scan-button" onclick="runInvasiveWatch()">Search</button>
+                </div>
+                <div id="invasive-watch-map" class="map-container"></div>
+                <div id="invasive-watch-list" class="results-grid">
+                    <!-- Invasive species list will be shown here -->
+                </div>
+            </div>
+
+            <!-- Habitat Suitability Prediction View -->
+            <div id="habitat-prediction-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Habitat Suitability Prediction</h1>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="habitatPlantNameInput" placeholder="Enter plant name...">
+                    </div>
+                    <button class="scan-button" onclick="runHabitatPrediction()">Predict</button>
+                </div>
+                <div id="habitat-prediction-map" class="map-container"></div>
+                <div id="habitat-prediction-results" style="margin-top: 24px;">
+                    <!-- Prediction results will be shown here -->
+                </div>
+            </div>
+
+            <!-- Bloom Maps View -->
+            <div id="bloom-maps-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Generative Bloom Maps</h1>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="bloomPlantNameInput" placeholder="Enter flowering plant name...">
+                    </div>
+                    <button class="scan-button" onclick="runBloomMapAnalysis()">Generate Map</button>
+                </div>
+                <div id="bloom-map-container" class="map-container"></div>
+                <div id="bloom-map-results" style="margin-top: 24px;">
+                    <!-- Results will be shown here -->
+                </div>
+            </div>
+
+            <!-- Botanical Data Art View -->
+            <div id="data-art-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Botanical Data Art</h1>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="artPlantNameInput" placeholder="Enter plant name for art...">
+                    </div>
+                    <button class="scan-button" onclick="generateDataArt()">Generate</button>
+                </div>
+                <div id="data-art-canvas" style="margin-top: 24px; border: 1px solid var(--border-color); border-radius: 16px; min-height: 500px; background: var(--bg-primary);">
+                    <!-- Art will be rendered here -->
+                </div>
+            </div>
+
+            <!-- Herbarium Recreation View -->
+            <div id="herbarium-view" style="display: none; padding: 24px; overflow-y: auto; height: 100%;">
+                <div class="encyclopedia-header">
+                    <h1 class="encyclopedia-title">Historical Herbarium Recreations</h1>
+                </div>
+                <div class="gbif-controls">
+                    <div class="search-bar">
+                        <input type="text" id="herbariumPlantNameInput" placeholder="Enter plant name...">
+                    </div>
+                    <button class="scan-button" onclick="runHerbariumRecreation()">Recreate</button>
+                </div>
+                <div id="herbarium-results" class="results-grid" style="margin-top: 24px;">
+                    <!-- Herbarium recreations will be shown here -->
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Image Modal -->
+    <div id="imageModal" class="image-modal" onclick="closeModal()">
+        <span class="close-modal" onclick="closeModal()">&times;</span>
+        <img class="modal-content" id="modalImage">
+    </div>
+
+    <!-- Details Modal -->
+    <div id="detailsModal" class="details-modal">
+        <div class="details-modal-content">
+            <div class="details-modal-header">
+                <h2 id="detailsModalTitle" class="details-modal-title"></h2>
+                <span class="close-details-modal" onclick="closeDetailsModal()">&times;</span>
+            </div>
+            <div id="detailsModalBody"></div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        let chatHistory = [];
+        let currentChatId = null;
+        let isFirstMessage = true;
+        let plantNameMap = {};
+
+        // Initialize the app
+        document.addEventListener('DOMContentLoaded', function() {
+            adjustTextareaHeight();
+            document.getElementById('messageInput').focus();
+            loadChatHistoryList();
+            initGbifFeatures();
+            loadPlantNameMap();
+        });
+
+        async function loadPlantNameMap() {
+            try {
+                const response = await fetch('plant_names.json');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                plantNameMap = await response.json();
+            } catch (error) {
+                console.error('Could not load plant name map:', error);
+            }
+        }
+
+        // Handle textarea auto-resize
+        function adjustTextareaHeight() {
+            const textarea = document.getElementById('messageInput');
+            textarea.style.height = 'auto';
+            textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
+        }
+
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Toggle sidebar for mobile
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            sidebar.classList.toggle('open');
+        }
+
+        // Close sidebar when clicking outside on mobile
+        document.addEventListener('click', function(event) {
+            const sidebar = document.getElementById('sidebar');
+            const toggle = document.querySelector('.mobile-menu-toggle');
+            
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open')) {
+                if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
+                    sidebar.classList.remove('open');
+                }
+            }
+        });
+
+        // Start new chat
+        function startNewChat() {
+            showChatView();
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="welcome-message">
+                    <div class="welcome-icon"><i class="material-icons" style="font-size: 48px;">auto_awesome</i></div>
+                    <div class="welcome-title">New Conversation</div>
+                    <div class="welcome-subtitle">What would you like to talk about today?</div>
+                </div>
+            `;
+            
+            chatHistory = [];
+            currentChatId = null;
+            isFirstMessage = true;
+            document.getElementById('messageInput').focus();
+            
+            // Unselect any active chat items
+            const activeItem = document.querySelector('.chat-item.active');
+            if (activeItem) {
+                activeItem.classList.remove('active');
+            }
+
+            // Close sidebar on mobile
+            if (window.innerWidth <= 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        }
+
+        // Send message
+        async function sendMessage() {
+            const messageInput = document.getElementById('messageInput');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            if (isFirstMessage) {
+                document.getElementById('chatMessages').innerHTML = '';
+                isFirstMessage = false;
+            }
+            
+            addMessage('user', message);
+            messageInput.value = '';
+            adjustTextareaHeight();
+            
+            showTypingIndicator();
+            
+            try {
+                const response = await fetch('/query', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ 
+                        query: message, 
+                        history: chatHistory,
+                        chat_id: currentChatId
+                    }),
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                hideTypingIndicator();
+                addBotMessage(data);
+                
+                // Update chat history
+                chatHistory.push({ user: message, bot: data });
+                
+                if (data.chat_id && currentChatId !== data.chat_id) {
+                    currentChatId = data.chat_id;
+                    loadChatHistoryList(); // Refresh list to show the new chat
+                } else if (data.chat_id) {
+                    // The chat is continuing, just ensure the list is up-to-date.
+                    loadChatHistoryList();
+                }
+
+
+            } catch (error) {
+                hideTypingIndicator();
+                addMessage('bot', `Sorry, I couldn't connect to the backend. Please check if the server is running. Error: ${error.message}`);
+            }
+        }
+
+        // Add user message to chat
+        function addMessage(sender, content) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            
+            messageDiv.innerHTML = `
+                <div class="message-content">
+                    ${content.replace(/\n/g, '<br>')}
+                    <div class="message-time">${time}</div>
+                </div>
+                <div class="message-avatar user-avatar">You</div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Add bot message with images
+        function addBotMessage(data) {
+            const chatMessages = document.getElementById('chatMessages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message bot';
+            
+            const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+            // Since images are now embedded in the answer, we just need to render it.
+            // The `marked` library will parse the markdown and leave the HTML `<img>` tags intact.
+            const renderedAnswer = marked.parse(data.answer);
+
+            messageDiv.innerHTML = `
+                <div class="message-avatar bot-avatar">AI</div>
+                <div class="message-content">
+                    ${renderedAnswer}
+                    <div class="message-time">${time}</div>
+                </div>
+            `;
+            
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Load all chat history from the server
+        async function loadChatHistoryList() {
+            try {
+                const response = await fetch('/history');
+                const data = await response.json();
+                const chatHistoryContainer = document.getElementById('chatHistory');
+                chatHistoryContainer.innerHTML = '';
+
+                data.history.forEach(chatId => {
+                    const chatItem = document.createElement('div');
+                    chatItem.className = 'chat-item';
+                    chatItem.dataset.chatId = chatId;
+                    if (chatId === currentChatId) {
+                        chatItem.classList.add('active');
+                    }
+
+                    // Extract a preview from the filename (e.g., timestamp)
+                    const title = `Chat from ${new Date(parseInt(chatId.split('_')[1])).toLocaleString()}`;
+                    const preview = chatId; // Fallback to chatId if parsing fails
+
+                    chatItem.innerHTML = `
+                        <div class="chat-title">${title}</div>
+                        <div class="chat-preview">${preview}</div>
+                    `;
+                    chatItem.onclick = () => loadChat(chatId);
+                    chatHistoryContainer.appendChild(chatItem);
+                });
+            } catch (error) {
+                console.error("Could not load chat history:", error);
+            }
+        }
+
+        // Load a specific chat session
+        async function loadChat(chatId) {
+            try {
+                showChatView();
+                const response = await fetch(`/history/${chatId}`);
+                const loadedHistory = await response.json();
+                
+                const chatMessages = document.getElementById('chatMessages');
+                chatMessages.innerHTML = '';
+                isFirstMessage = false;
+
+                chatHistory = loadedHistory;
+                currentChatId = chatId;
+
+                loadedHistory.forEach(item => {
+                    addMessage('user', item.user);
+                    if (item.bot) {
+                        addBotMessage(item.bot);
+                    }
+                });
+
+                // Highlight the active chat
+                document.querySelectorAll('.chat-item').forEach(item => {
+                    item.classList.remove('active');
+                    if (item.dataset.chatId === chatId) {
+                        item.classList.add('active');
+                    }
+                });
+
+            } catch (error) {
+                console.error(`Could not load chat ${chatId}:`, error);
+            }
+        }
+
+        // Show typing indicator
+        function showTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            const chatMessages = document.getElementById('chatMessages');
+            typingIndicator.style.display = 'flex';
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // Hide typing indicator
+        function hideTypingIndicator() {
+            const typingIndicator = document.getElementById('typingIndicator');
+            typingIndicator.style.display = 'none';
+        }
+
+        // Image Modal Functions
+        function openModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = "flex";
+            modalImg.src = src;
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('imageModal');
+            modal.style.display = "none";
+        }
+
+        // Details Modal Functions
+        function openDetailsModal(title, content) {
+            document.getElementById('detailsModalTitle').innerText = title;
+            document.getElementById('detailsModalBody').innerHTML = content;
+            document.getElementById('detailsModal').style.display = 'flex';
+        }
+
+        function closeDetailsModal() {
+            document.getElementById('detailsModal').style.display = 'none';
+        }
+
+        // View Switching
+        function showView(viewId) {
+            const views = ['chat-view', 'encyclopedia-view', 'plant-detail-view', 'disease-scanner-view', 'plant-map-view', 'endangered-watch-view', 'gbif-tools-view', 'climate-analysis-view', 'invasive-watch-view', 'habitat-prediction-view', 'bloom-maps-view', 'data-art-view', 'herbarium-view'];
+            views.forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.style.display = (id === viewId) ? (id === 'chat-view' ? 'flex' : 'block') : 'none';
+                }
+            });
+        }
+
+        function showChatView() {
+            showView('chat-view');
+        }
+
+        function showPlantEncyclopedia() {
+            showView('encyclopedia-view');
+            loadPlants();
+        }
+
+        function showDiseaseScanner() {
+            showView('disease-scanner-view');
+        }
+
+        function showPlantMap() {
+            showView('plant-map-view');
+            initPlantMap();
+        }
+
+        function showEndangeredWatch() {
+            showView('endangered-watch-view');
+            initEndangeredWatch();
+        }
+
+        function showGbifTools() {
+            showView('gbif-tools-view');
+        }
+
+        function showClimateAnalysis() {
+            showView('climate-analysis-view');
+        }
+
+        function showInvasiveWatch() {
+            showView('invasive-watch-view');
+            initInvasiveWatchMap();
+        }
+
+        function showHabitatPrediction() {
+            showView('habitat-prediction-view');
+            initHabitatPredictionMap();
+        }
+
+        function showBloomMaps() {
+            showView('bloom-maps-view');
+            initBloomMap();
+        }
+
+        function showDataArt() {
+            showView('data-art-view');
+        }
+
+        function showHerbariumRecreation() {
+            showView('herbarium-view');
+        }
+
+        // --- GBIF Features ---
+        let plantMap, endangeredMap, invasiveMap, habitatMap, bloomMap;
+        let plantMarkers = L.featureGroup();
+        let endangeredMarkers = L.featureGroup();
+        let invasiveMarkers = L.featureGroup();
+        let habitatMarkers = L.featureGroup();
+        let bloomMarkers = L.featureGroup();
+
+        const indianStates = [
+            "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat", "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh", "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab", "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh", "Uttarakhand", "West Bengal", "Andaman & Nicobar Islands", "Chandigarh", "Dadra & Nagar Haveli and Daman & Diu", "Delhi", "Jammu & Kashmir", "Ladakh", "Lakshadweep", "Puducherry"
+        ];
+
+        function initGbifFeatures() {
+            const stateSelect = document.getElementById('stateSelect');
+            const endangeredStateSelect = document.getElementById('endangeredStateSelect');
+            const invasiveStateSelect = document.getElementById('invasiveStateSelect');
+            
+            indianStates.forEach(state => {
+                const option = `<option value="${state}">${state}</option>`;
+                if (stateSelect) stateSelect.innerHTML += option;
+                if (endangeredStateSelect) endangeredStateSelect.innerHTML += option;
+                if (invasiveStateSelect) invasiveStateSelect.innerHTML += option;
+            });
+        }
+
+        function initPlantMap() {
+            if (!plantMap) {
+                plantMap = L.map('plant-map-container').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(plantMap);
+                plantMarkers.addTo(plantMap);
+            }
+        }
+
+        function initEndangeredWatch() {
+            if (!endangeredMap) {
+                endangeredMap = L.map('endangered-species-map').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(endangeredMap);
+                endangeredMarkers.addTo(endangeredMap);
+            }
+        }
+
+        async function getPlantDetailsFromAI(plantName) {
+            openDetailsModal(plantName, '<div class="spinner-container"><div class="spinner"></div></div>');
+            
+            const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+            const model = 'gemini-1.5-flash';
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+            const payload = {
+                "contents": [{
+                    "parts": [
+                        { "text": `Provide a detailed description of the plant "${plantName}". Include its common uses, medicinal properties, and significance, particularly in the Indian context. Format the response in HTML with headings and paragraphs.` }
+                    ]
+                }]
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!response.ok) throw new Error('Failed to get details from AI.');
+                const data = await response.json();
+                const details = data.candidates[0].content.parts[0].text;
+                document.getElementById('detailsModalBody').innerHTML = details;
+            } catch (error) {
+                document.getElementById('detailsModalBody').innerHTML = `<p>Could not fetch details. ${error.message}</p>`;
+            }
+        }
+
+        async function searchPlantMap() {
+            let plantName = document.getElementById('plantNameInput').value;
+            const state = document.getElementById('stateSelect').value;
+            const yearRange = document.getElementById('yearRangeInput').value;
+            const speciesType = document.getElementById('speciesTypeSelect').value;
+            const detailsContainer = document.getElementById('occurrence-details');
+
+            detailsContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            plantMarkers.clearLayers();
+
+            if (!plantName) {
+                detailsContainer.innerHTML = '<p style="color: var(--text-secondary);">Please enter a plant name to search.</p>';
+                return;
+            }
+
+            let searchName = plantName;
+            const lowerCasePlantName = plantName.toLowerCase().trim();
+            for (const commonName in plantNameMap) {
+                if (commonName.toLowerCase() === lowerCasePlantName) {
+                    searchName = plantNameMap[commonName];
+                    break;
+                }
+            }
+
+            try {
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                if (!speciesRes.ok) throw new Error('Could not find the plant species.');
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error('Could not find a matching species in GBIF.');
+                const taxonKey = speciesData.usageKey;
+
+                let occurrenceUrl = `https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&country=IN&hasCoordinate=true&limit=200`;
+                if (state) occurrenceUrl += `&stateProvince=${state}`;
+                if (yearRange) occurrenceUrl += `&year=${yearRange}`;
+                if (speciesType === 'native') occurrenceUrl += '&establishmentMeans=NATIVE';
+                else if (speciesType === 'introduced') occurrenceUrl += '&establishmentMeans=INTRODUCED';
+
+                const occurrencesRes = await fetch(occurrenceUrl);
+                if (!occurrencesRes.ok) throw new Error('Failed to fetch occurrence data.');
+                const occurrencesData = await occurrencesRes.json();
+
+                detailsContainer.innerHTML = '';
+                if (occurrencesData.results.length === 0) {
+                    detailsContainer.innerHTML = '<p style="color: var(--text-secondary);">No occurrences found for the specified criteria.</p>';
+                    return;
+                }
+
+                occurrencesData.results.forEach(item => {
+                    if (item.decimalLatitude && item.decimalLongitude) {
+                        const card = document.createElement('div');
+                        card.className = 'result-item-card';
+                        card.innerHTML = `
+                            <h4>${item.scientificName}</h4>
+                            <p><strong>Date:</strong> ${item.eventDate ? new Date(item.eventDate).toLocaleDateString() : 'N/A'}</p>
+                            <p><strong>Observer:</strong> ${item.recordedBy || 'N/A'}</p>
+                            <p><strong>Source:</strong> <a href="https://www.gbif.org/occurrence/${item.key}" target="_blank" class="source-link">View on GBIF</a></p>
+                            <button class="details-button" onclick="getPlantDetailsFromAI('${item.scientificName}')">Details</button>
+                        `;
+                        detailsContainer.appendChild(card);
+
+                        L.marker([item.decimalLatitude, item.decimalLongitude]).addTo(plantMarkers)
+                            .bindPopup(`<b>${item.scientificName}</b><br>Observed on ${new Date(item.eventDate).toLocaleDateString()}`);
+                    }
+                });
+
+                if (plantMarkers.getLayers().length > 0) {
+                    plantMap.fitBounds(plantMarkers.getBounds());
+                }
+
+            } catch (error) {
+                detailsContainer.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+        async function searchEndangeredSpecies() {
+            const category = document.getElementById('threatCategorySelect').value;
+            let plantName = document.getElementById('endangeredPlantNameInput').value;
+            const state = document.getElementById('endangeredStateSelect').value;
+            const listContainer = document.getElementById('endangered-species-list');
+
+            listContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            endangeredMarkers.clearLayers();
+
+            try {
+                let searchUrl = `https://api.gbif.org/v1/occurrence/search?country=IN&hasCoordinate=true&limit=200`;
+                if (category) searchUrl += `&iucnRedListCategory=${category}`;
+                if (state) searchUrl += `&stateProvince=${state}`;
+                if (plantName) {
+                    let searchName = plantName;
+                    const lowerCasePlantName = plantName.toLowerCase().trim();
+                    for (const commonName in plantNameMap) {
+                        if (commonName.toLowerCase() === lowerCasePlantName) {
+                            searchName = plantNameMap[commonName];
+                            break;
+                        }
+                    }
+                    const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                    if (!speciesRes.ok) throw new Error('Could not find the plant species.');
+                    const speciesData = await speciesRes.json();
+                    if (!speciesData.usageKey) throw new Error('Could not find a matching species in GBIF.');
+                    searchUrl += `&taxonKey=${speciesData.usageKey}`;
+                }
+
+                const response = await fetch(searchUrl);
+                if (!response.ok) throw new Error('Failed to fetch endangered species data.');
+                const data = await response.json();
+
+                listContainer.innerHTML = '';
+                if (data.results.length === 0) {
+                    listContainer.innerHTML = '<p style="color: var(--text-secondary);">No endangered species found for the specified criteria.</p>';
+                    return;
+                }
+
+                data.results.forEach(item => {
+                     if (item.decimalLatitude && item.decimalLongitude) {
+                        const card = document.createElement('div');
+                        card.className = 'result-item-card';
+                        card.innerHTML = `
+                            <h4>${item.scientificName}</h4>
+                            <p><strong>Status:</strong> ${item.iucnRedListCategory || 'N/A'}</p>
+                            <p><strong>State:</strong> ${item.stateProvince || 'N/A'}</p>
+                            <button class="details-button" onclick="getPlantDetailsFromAI('${item.scientificName}')">Details</button>
+                        `;
+                        listContainer.appendChild(card);
+
+                        L.marker([item.decimalLatitude, item.decimalLongitude]).addTo(endangeredMarkers)
+                            .bindPopup(`<b>${item.scientificName}</b><br>Status: ${item.iucnRedListCategory || 'N/A'}`);
+                    }
+                });
+
+                if (endangeredMarkers.getLayers().length > 0) {
+                    endangeredMap.fitBounds(endangeredMarkers.getBounds());
+                }
+
+            } catch (error) {
+                listContainer.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+        function initInvasiveWatchMap() {
+            if (!invasiveMap) {
+                invasiveMap = L.map('invasive-watch-map').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(invasiveMap);
+                invasiveMarkers.addTo(invasiveMap);
+            }
+        }
+
+        function initHabitatPredictionMap() {
+            if (!habitatMap) {
+                habitatMap = L.map('habitat-prediction-map').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(habitatMap);
+                habitatMarkers.addTo(habitatMap);
+            }
+        }
+
+        async function runClimateAnalysis() {
+            let plantName = document.getElementById('climatePlantNameInput').value;
+            const resultsContainer = document.getElementById('climate-analysis-results');
+            if (!plantName) {
+                resultsContainer.innerHTML = '<p>Please enter a plant name.</p>';
+                return;
+            }
+            resultsContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+
+            try {
+                // Map common name to scientific name
+                let searchName = plantName;
+                const lowerCasePlantName = plantName.toLowerCase().trim();
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase() === lowerCasePlantName) {
+                        searchName = plantNameMap[commonName];
+                        break;
+                    }
+                }
+
+                // 1. Get GBIF data
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error(`Could not find species "${plantName}" in GBIF.`);
+                const taxonKey = speciesData.usageKey;
+
+                const occurrencesRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&country=IN&hasCoordinate=true&limit=100`);
+                const occurrencesData = await occurrencesRes.json();
+                const occurrences = occurrencesData.results.map(o => ({ lat: o.decimalLatitude, lon: o.decimalLongitude }));
+
+                if (occurrences.length === 0) {
+                    throw new Error('Not enough occurrence data found in India for analysis.');
+                }
+
+                // 2. Call Gemini for analysis
+                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const model = 'gemini-1.5-flash';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const prompt = `
+                    Analyze the climate-plant relationship for "${plantName}" in India based on the following GBIF occurrence coordinates: ${JSON.stringify(occurrences)}.
+                    
+                    Your tasks:
+                    1.  Describe the current suitable climate and habitat for this plant based on the given locations.
+                    2.  Discuss the potential impact of climate change on its distribution in India.
+                    3.  Model and describe the potentially suitable habitats under a future climate scenario (e.g., +2°C warming).
+
+                    Provide the response in well-structured Markdown format with headings, paragraphs, and lists. Do not include any HTML tags.
+                `;
+
+                const payload = { "contents": [{ "parts": [{ "text": prompt }] }] };
+                const aiResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!aiResponse.ok) throw new Error('Failed to get analysis from AI.');
+                const aiData = await aiResponse.json();
+                const analysisText = aiData.candidates[0].content.parts[0].text;
+                resultsContainer.innerHTML = `<div class="analysis-result-container">${marked.parse(analysisText)}</div>`;
+
+            } catch (error) {
+                resultsContainer.innerHTML = `<div class="analysis-result-container"><p style="color: var(--text-secondary);">${error.message}</p></div>`;
+            }
+        }
+
+        async function runInvasiveWatch() {
+            const state = document.getElementById('invasiveStateSelect').value;
+            const listContainer = document.getElementById('invasive-watch-list');
+            listContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            invasiveMarkers.clearLayers();
+
+            try {
+                let searchUrl = `https://api.gbif.org/v1/occurrence/search?country=IN&hasCoordinate=true&establishmentMeans=INVASIVE&limit=200`;
+                if (state) searchUrl += `&stateProvince=${state}`;
+
+                const response = await fetch(searchUrl);
+                if (!response.ok) throw new Error('Failed to fetch invasive species data.');
+                const data = await response.json();
+
+                listContainer.innerHTML = '';
+                if (data.results.length === 0) {
+                    listContainer.innerHTML = '<p style="color: var(--text-secondary);">No invasive species found for the specified criteria.</p>';
+                    return;
+                }
+
+                const species = {};
+                data.results.forEach(item => {
+                    if (item.scientificName) {
+                        if (!species[item.scientificName]) {
+                            species[item.scientificName] = { count: 0, locations: [] };
+                        }
+                        species[item.scientificName].count++;
+                        if (item.decimalLatitude && item.decimalLongitude) {
+                            species[item.scientificName].locations.push([item.decimalLatitude, item.decimalLongitude]);
+                        }
+                    }
+                });
+
+                for (const name in species) {
+                    const card = document.createElement('div');
+                    card.className = 'result-item-card';
+                    card.innerHTML = `
+                        <h4>${name}</h4>
+                        <p><strong>Occurrences:</strong> ${species[name].count}</p>
+                        <button class="details-button" onclick="getPlantDetailsFromAI('${name}')">Details</button>
+                    `;
+                    listContainer.appendChild(card);
+
+                    species[name].locations.forEach(loc => {
+                        L.marker(loc).addTo(invasiveMarkers)
+                            .bindPopup(`<b>${name}</b>`);
+                    });
+                }
+
+                if (invasiveMarkers.getLayers().length > 0) {
+                    invasiveMap.fitBounds(invasiveMarkers.getBounds());
+                }
+
+            } catch (error) {
+                listContainer.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+        async function runHabitatPrediction() {
+            let plantName = document.getElementById('habitatPlantNameInput').value;
+            const resultsContainer = document.getElementById('habitat-prediction-results');
+            const mapContainer = document.getElementById('habitat-prediction-map');
+            
+            if (!plantName) {
+                resultsContainer.innerHTML = '<p>Please enter a plant name.</p>';
+                return;
+            }
+            resultsContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            habitatMarkers.clearLayers();
+
+            try {
+                // Map common name to scientific name
+                let searchName = plantName;
+                const lowerCasePlantName = plantName.toLowerCase().trim();
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase() === lowerCasePlantName) {
+                        searchName = plantNameMap[commonName];
+                        break;
+                    }
+                }
+
+                // 1. Get GBIF data
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error(`Could not find species "${plantName}" in GBIF.`);
+                const taxonKey = speciesData.usageKey;
+
+                const occurrencesRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&country=IN&hasCoordinate=true&limit=200`);
+                const occurrencesData = await occurrencesRes.json();
+                const occurrences = occurrencesData.results;
+
+                if (occurrences.length < 5) { // Need some data points
+                    throw new Error('Not enough occurrence data found in India for a reliable prediction.');
+                }
+
+                // Plot existing occurrences
+                occurrences.forEach(item => {
+                    if (item.decimalLatitude && item.decimalLongitude) {
+                        L.circleMarker([item.decimalLatitude, item.decimalLongitude], { radius: 5, color: 'blue', fillOpacity: 0.8 }).addTo(habitatMarkers)
+                            .bindPopup(`<b>Existing:</b> ${item.scientificName}`);
+                    }
+                });
+                if (habitatMarkers.getLayers().length > 0) {
+                    habitatMap.fitBounds(habitatMarkers.getBounds());
+                }
+
+                // 2. Call Gemini for prediction
+                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const model = 'gemini-1.5-flash';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const prompt = `
+                    Based on the known occurrence data for "${plantName}" in India, predict new suitable habitats.
+                    The known locations are (lat, lon): ${JSON.stringify(occurrences.map(o => `(${o.decimalLatitude}, ${o.decimalLongitude})`))}.
+                    
+                    Your tasks:
+                    1.  Analyze the environmental parameters of the known locations.
+                    2.  Predict 5-10 new potential locations (latitude, longitude) in India where this plant could thrive.
+                    3.  Provide a brief justification for each predicted location.
+                    4.  Return the response as a single, valid JSON object. Do not add any other text or markdown.
+                        The JSON object should have a key "predictions" which is an array of objects.
+                        Each object in the array should have "location" (an object with "lat" and "lon"), and "justification" (a string).
+                        Example: {"predictions": [{"location": {"lat": 22.5, "lon": 88.3}, "justification": "Similar climate to existing points."}]}
+                `;
+
+                const payload = { "contents": [{ "parts": [{ "text": prompt }] }] };
+                const aiResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!aiResponse.ok) throw new Error('Failed to get prediction from AI.');
+                const aiData = await aiResponse.json();
+                const responseText = aiData.candidates[0].content.parts[0].text;
+                
+                let predictionData;
+                try {
+                    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+                    if (jsonMatch && jsonMatch[1]) {
+                        predictionData = JSON.parse(jsonMatch[1].trim());
+                    } else {
+                        predictionData = JSON.parse(responseText.trim());
+                    }
+                } catch (e) {
+                    console.error("Failed to parse JSON from prediction response:", responseText, e);
+                    throw new Error("Could not understand the prediction from the AI. The format was incorrect.");
+                }
+
+                let resultsHtml = '<h3>Predicted Suitable Habitats:</h3><ul>';
+                predictionData.predictions.forEach(pred => {
+                    resultsHtml += `<li><strong>Location (${pred.location.lat.toFixed(4)}, ${pred.location.lon.toFixed(4)}):</strong> ${pred.justification}</li>`;
+                    
+                    // Add predicted markers to map
+                    L.circleMarker([pred.location.lat, pred.location.lon], { radius: 6, color: 'red', fillColor: '#f03', fillOpacity: 0.9 }).addTo(habitatMarkers)
+                        .bindPopup(`<b>Predicted:</b> ${plantName}<br>${pred.justification}`);
+                });
+                resultsHtml += '</ul>';
+                resultsContainer.innerHTML = `<div class="analysis-result-container">${resultsHtml}</div>`;
+
+                if (habitatMarkers.getLayers().length > 0) {
+                    habitatMap.fitBounds(habitatMarkers.getBounds());
+                }
+
+            } catch (error) {
+                resultsContainer.innerHTML = `<div class="analysis-result-container"><p style="color: var(--text-secondary);">${error.message}</p></div>`;
+            }
+        }
+
+        function initBloomMap() {
+            if (!bloomMap) {
+                bloomMap = L.map('bloom-map-container').setView([20.5937, 78.9629], 5);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                }).addTo(bloomMap);
+                bloomMarkers.addTo(bloomMap);
+            }
+        }
+
+        async function runBloomMapAnalysis() {
+            let plantName = document.getElementById('bloomPlantNameInput').value;
+            const resultsContainer = document.getElementById('bloom-map-results');
+            if (!plantName) {
+                resultsContainer.innerHTML = '<p>Please enter a plant name.</p>';
+                return;
+            }
+            resultsContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+            bloomMarkers.clearLayers();
+
+            try {
+                const lowerCasePlantName = plantName.toLowerCase().trim();
+                let searchName = lowerCasePlantName;
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase() === lowerCasePlantName) {
+                        searchName = plantNameMap[commonName];
+                        break;
+                    }
+                }
+
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error(`Could not find species "${plantName}" in GBIF.`);
+                const taxonKey = speciesData.usageKey;
+
+                const occurrencesRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&country=IN&hasCoordinate=true&limit=300`);
+                const occurrencesData = await occurrencesRes.json();
+                const occurrences = occurrencesData.results;
+
+                if (occurrences.length === 0) {
+                    throw new Error('No occurrence data found for this plant in India.');
+                }
+
+                const monthlyData = {};
+                occurrences.forEach(occ => {
+                    if (occ.month && occ.decimalLatitude && occ.decimalLongitude) {
+                        if (!monthlyData[occ.month]) {
+                            monthlyData[occ.month] = [];
+                        }
+                        monthlyData[occ.month].push(occ);
+                    }
+                });
+
+                resultsContainer.innerHTML = '<h3>Monthly Bloom Analysis</h3>';
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                
+                let monthCounter = 0;
+                const interval = setInterval(() => {
+                    if (monthCounter >= 12) {
+                        clearInterval(interval);
+                        return;
+                    }
+                    const month = monthCounter + 1;
+                    const monthName = monthNames[monthCounter];
+                    resultsContainer.innerHTML = `<h3>Blooming in ${monthName}</h3>`;
+                    bloomMarkers.clearLayers();
+
+                    if (monthlyData[month]) {
+                        monthlyData[month].forEach(occ => {
+                            L.circleMarker([occ.decimalLatitude, occ.decimalLongitude], { radius: 6, color: 'magenta', fillColor: '#ff00ff', fillOpacity: 0.8 }).addTo(bloomMarkers)
+                                .bindPopup(`<b>${occ.scientificName}</b><br>Observed in ${monthName}`);
+                        });
+                    }
+                    monthCounter++;
+                }, 1500);
+
+            } catch (error) {
+                resultsContainer.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+        async function generateDataArt() {
+            let plantName = document.getElementById('artPlantNameInput').value;
+            const canvasContainer = document.getElementById('data-art-canvas');
+            if (!plantName) {
+                canvasContainer.innerHTML = '<p style="text-align: center; padding-top: 20px;">Please enter a plant name.</p>';
+                return;
+            }
+            canvasContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+
+            try {
+                let searchName = plantName;
+                const lowerCasePlantName = plantName.toLowerCase().trim();
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase() === lowerCasePlantName) {
+                        searchName = plantNameMap[commonName];
+                        break;
+                    }
+                }
+
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error(`Could not find species "${plantName}" in GBIF.`);
+                const taxonKey = speciesData.usageKey;
+
+                const occurrencesRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&country=IN&hasCoordinate=true&limit=500`);
+                const occurrencesData = await occurrencesRes.json();
+                const locations = occurrencesData.results.map(o => ({ lat: o.decimalLatitude, lon: o.decimalLongitude }));
+
+                if (locations.length < 5) {
+                    throw new Error('Not enough data points to generate art.');
+                }
+
+                const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+                const model = 'gemini-1.5-flash';
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+
+                const prompt = `
+                    Generate a creative and visually appealing SVG data artwork based on the geographical distribution of "${plantName}" in India.
+                    The occurrence locations are: ${JSON.stringify(locations)}.
+                    
+                    Instructions for the SVG:
+                    1.  The SVG should be 500x500 pixels.
+                    2.  Use the locations to inspire the shapes, lines, or patterns. Do not just plot dots.
+                    3.  Choose a color palette that is aesthetically pleasing and relates to the plant or its environment.
+                    4.  The artwork should be abstract but clearly derived from the data.
+                    5.  Return ONLY the SVG code, without any other text, explanation, or markdown. Start with <svg> and end with </svg>.
+                `;
+
+                const payload = { "contents": [{ "parts": [{ "text": prompt }] }] };
+                const aiResponse = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!aiResponse.ok) throw new Error('Failed to generate art from AI.');
+                const aiData = await aiResponse.json();
+                let svgArt = aiData.candidates[0].content.parts[0].text;
+
+                // Clean the SVG response
+                const svgMatch = svgArt.match(/<svg[\s\S]*?>[\s\S]*?<\/svg>/);
+                if (svgMatch) {
+                    svgArt = svgMatch[0];
+                } else {
+                    throw new Error("The AI did not return a valid SVG.");
+                }
+
+                canvasContainer.innerHTML = svgArt;
+
+            } catch (error) {
+                canvasContainer.innerHTML = `<p style="text-align: center; padding-top: 20px; color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+        async function runHerbariumRecreation() {
+            let plantName = document.getElementById('herbariumPlantNameInput').value;
+            const resultsContainer = document.getElementById('herbarium-results');
+            if (!plantName) {
+                resultsContainer.innerHTML = '<p>Please enter a plant name.</p>';
+                return;
+            }
+            resultsContainer.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+
+            try {
+                let searchName = plantName;
+                const lowerCasePlantName = plantName.toLowerCase().trim();
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase() === lowerCasePlantName) {
+                        searchName = plantNameMap[commonName];
+                        break;
+                    }
+                }
+
+                const speciesRes = await fetch(`https://api.gbif.org/v1/species/match?verbose=true&name=${searchName}`);
+                const speciesData = await speciesRes.json();
+                if (!speciesData.usageKey) throw new Error(`Could not find species "${plantName}" in GBIF.`);
+                const taxonKey = speciesData.usageKey;
+
+                const occurrencesRes = await fetch(`https://api.gbif.org/v1/occurrence/search?taxonKey=${taxonKey}&mediaType=StillImage&limit=20`);
+                const occurrencesData = await occurrencesRes.json();
+                const records = occurrencesData.results;
+
+                if (records.length === 0) {
+                    throw new Error('No herbarium records with images found for this plant.');
+                }
+
+                resultsContainer.innerHTML = '';
+                records.forEach(record => {
+                    if (record.media && record.media.length > 0) {
+                        const imageUrl = record.media[0].identifier;
+                        const card = document.createElement('div');
+                        card.className = 'result-item-card';
+                        card.innerHTML = `
+                            <img src="${imageUrl}" alt="Herbarium specimen of ${record.scientificName}" style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px; margin-bottom: 12px;">
+                            <h4>${record.scientificName}</h4>
+                            <p><strong>Collector:</strong> ${record.recordedBy || 'N/A'}</p>
+                            <p><strong>Date:</strong> ${record.eventDate ? new Date(record.eventDate).toLocaleDateString() : 'N/A'}</p>
+                            <p><strong>Source:</strong> <a href="https://www.gbif.org/occurrence/${record.key}" target="_blank" class="source-link">View on GBIF</a></p>
+                        `;
+                        resultsContainer.appendChild(card);
+                    }
+                });
+
+            } catch (error) {
+                resultsContainer.innerHTML = `<p style="color: var(--text-secondary);">${error.message}</p>`;
+            }
+        }
+
+
+        // Plant Encyclopedia Functions
+        const apiKey = 'sk-nWFQ689afc7befd0511803';
+        let allPlants = [];
+
+        async function loadPlants(query = '') {
+            const plantGrid = document.getElementById('plantGrid');
+            plantGrid.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>'; // Show loader
+
+            try {
+                const url = `https://perenual.com/api/v2/species-list?key=${apiKey}&q=${query}`;
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`API request failed with status ${response.status}`);
+                }
+                const data = await response.json();
+                allPlants = data.data;
+                renderPlants(allPlants);
+            } catch (error) {
+                plantGrid.innerHTML = `<p style="color: var(--text-secondary);">Failed to load plants. ${error.message}</p>`;
+            }
+        }
+
+        function renderPlants(plants) {
+            const plantGrid = document.getElementById('plantGrid');
+            plantGrid.innerHTML = '';
+            if (plants.length === 0) {
+                plantGrid.innerHTML = `<p style="color: var(--text-secondary);">No plants found.</p>`;
+                return;
+            }
+
+            plants.forEach(plant => {
+                const card = document.createElement('div');
+                card.className = 'plant-card';
+                card.innerHTML = `
+                    <img src="${plant.default_image ? plant.default_image.thumbnail : 'https://via.placeholder.com/220x180.png?text=No+Image'}" alt="${plant.common_name}" class="plant-card-image">
+                    <div class="plant-card-content">
+                        <div class="plant-card-title">${plant.common_name}</div>
+                        <div class="plant-card-subtitle"><em>${plant.scientific_name[0]}</em></div>
+                    </div>
+                `;
+                card.onclick = () => showPlantDetail(plant.id);
+                plantGrid.appendChild(card);
+            });
+        }
+        
+        document.getElementById('plantSearchInput').addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            let scientificNameFromMap = '';
+            if (searchTerm) {
+                for (const commonName in plantNameMap) {
+                    if (commonName.toLowerCase().includes(searchTerm)) {
+                        scientificNameFromMap = plantNameMap[commonName].toLowerCase();
+                        break;
+                    }
+                }
+            }
+
+            const filteredPlants = allPlants.filter(plant => 
+                plant.common_name.toLowerCase().includes(searchTerm) ||
+                (plant.scientific_name && plant.scientific_name.some(name => name.toLowerCase().includes(searchTerm))) ||
+                (scientificNameFromMap && plant.scientific_name && plant.scientific_name.some(name => name.toLowerCase().includes(scientificNameFromMap)))
+            );
+            renderPlants(filteredPlants);
+        });
+
+        async function showPlantDetail(plantId) {
+            document.getElementById('encyclopedia-view').style.display = 'none';
+            document.getElementById('disease-scanner-view').style.display = 'none';
+            const detailView = document.getElementById('plant-detail-view');
+            detailView.style.display = 'block';
+            detailView.innerHTML = '<div class="spinner-container"><div class="spinner"></div></div>';
+
+            try {
+                // Fetch plant details
+                const plantRes = await fetch(`https://perenual.com/api/v2/species/details/${plantId}?key=${apiKey}`);
+                if (!plantRes.ok) throw new Error('Failed to fetch plant details.');
+                const plant = await plantRes.json();
+
+                // Fetch disease list (using general list as placeholder)
+                const diseaseRes = await fetch(`https://perenual.com/api/pest-disease-list?key=${apiKey}`);
+                if (!diseaseRes.ok) throw new Error('Failed to fetch disease list.');
+                const diseaseData = await diseaseRes.json();
+                const diseases = diseaseData.data.slice(0, 3); // Using first 3 as example
+
+                detailView.innerHTML = `
+                    <div class="back-btn" onclick="showPlantEncyclopedia()">
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m7 7l-7-7 7-7"></path></svg>
+                        Back to Encyclopedia
+                    </div>
+                    <div class="plant-detail-header">
+                        <img src="${plant.default_image ? plant.default_image.regular_url : ''}" alt="${plant.common_name}" class="plant-detail-image">
+                        <div class="plant-detail-info">
+                            <h1>${plant.common_name}</h1>
+                            <p><em>${plant.scientific_name.join(', ')}</em></p>
+                            <p>${plant.description || 'No description available.'}</p>
+                        </div>
+                    </div>
+                    <div class="tabs">
+                        <div class="tab-link active" onclick="openTab(event, 'symptoms')">Symptoms</div>
+                        <div class="tab-link" onclick="openTab(event, 'treatment')">Treatment Plan</div>
+                        <div class="tab-link" onclick="openTab(event, 'prevention')">Prevention</div>
+                    </div>
+                    <div id="symptoms" class="tab-content active">
+                        <h3>Common Symptoms</h3>
+                        <p>Details about common symptoms for ${plant.common_name} would appear here, based on RAG data.</p>
+                    </div>
+                    <div id="treatment" class="tab-content">
+                        <h3>Treatment Plan</h3>
+                        <p>A detailed treatment plan from your PDF documents and the Perenual API would be displayed here.</p>
+                    </div>
+                    <div id="prevention" class="tab-content">
+                        <h3>Prevention Tips</h3>
+                        <p>Prevention strategies, combining information from your RAG data and the API, would be shown here.</p>
+                    </div>
+                `;
+            } catch (error) {
+                detailView.innerHTML = `<p style="color: var(--text-secondary);">Failed to load plant details. ${error.message}</p>`;
+            }
+        }
+
+        function openTab(evt, tabName) {
+            var i, tabcontent, tablinks;
+            tabcontent = document.getElementsByClassName("tab-content");
+            for (i = 0; i < tabcontent.length; i++) {
+                tabcontent[i].style.display = "none";
+            }
+            tablinks = document.getElementsByClassName("tab-link");
+            for (i = 0; i < tablinks.length; i++) {
+                tablinks[i].className = tablinks[i].className.replace(" active", "");
+            }
+            document.getElementById(tabName).style.display = "block";
+            evt.currentTarget.className += " active";
+        }
+
+        // --- Improved Disease Scanner Functions ---
+
+        const uploadArea = document.getElementById('uploadArea');
+        const imageUpload = document.getElementById('imageUpload');
+        const previewsGrid = document.getElementById('image-previews-grid');
+        const analyzeBtnContainer = document.getElementById('analyze-button-container');
+        const scannerLoader = document.getElementById('scanner-loader');
+        const resultsContainer = document.getElementById('scanner-results-container');
+
+        let uploadedFiles = []; // To store File objects
+
+        // Drag and drop listeners
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            }, false);
+        });
+        ['dragenter', 'dragover'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.add('hover'), false);
+        });
+        ['dragleave', 'drop'].forEach(eventName => {
+            uploadArea.addEventListener(eventName, () => uploadArea.classList.remove('hover'), false);
+        });
+
+        uploadArea.addEventListener('drop', (e) => {
+            handleFiles(e.dataTransfer.files);
+        });
+
+        imageUpload.addEventListener('change', (e) => {
+            handleFiles(e.target.files);
+        });
+
+        function handleFiles(files) {
+            for (const file of files) {
+                if (file.type.startsWith('image/')) {
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                    const fileData = {
+                        id: `file-${Date.now()}-${Math.random().toString(36).substring(2)}`,
+                        file: file,
+                        src: e.target.result
+                    };
+                        uploadedFiles.push(fileData);
+                        renderPreviews();
+                    };
+                    reader.readAsDataURL(file);
+                }
+            }
+        }
+
+        function renderPreviews() {
+            previewsGrid.innerHTML = '';
+            uploadedFiles.forEach(fileData => {
+                const card = document.createElement('div');
+                card.className = 'preview-card';
+                card.innerHTML = `
+                    <img src="${fileData.src}" alt="Preview">
+                    <button class="remove-image-btn" data-id="${fileData.id}">&times;</button>
+                `;
+                previewsGrid.appendChild(card);
+            });
+
+            // Add event listeners to remove buttons
+            document.querySelectorAll('.remove-image-btn').forEach(btn => {
+                btn.onclick = (e) => {
+                    const idToRemove = e.target.dataset.id;
+                    uploadedFiles = uploadedFiles.filter(f => f.id !== idToRemove);
+                    renderPreviews();
+                };
+            });
+
+            analyzeBtnContainer.style.display = uploadedFiles.length > 0 ? 'block' : 'none';
+            uploadArea.style.display = uploadedFiles.length > 0 ? 'none' : 'block';
+        }
+
+        async function analyzeImages() {
+            if (uploadedFiles.length === 0) {
+                alert('Please upload at least one image.');
+                return;
+            }
+
+            scannerLoader.style.display = 'flex';
+            resultsContainer.innerHTML = '';
+            analyzeBtnContainer.style.display = 'none';
+
+            for (const fileData of uploadedFiles) {
+                await analyzeSingleImage(fileData);
+            }
+
+            scannerLoader.style.display = 'none';
+        }
+
+        async function analyzeSingleImage(fileData) {
+            const resultCardId = `result-${fileData.id}`;
+            createResultCard(resultCardId, fileData.src);
+
+            const GEMINI_API_KEY = 'AIzaSyBXH4AxfQbffS_CfukNliMYqrOZy5goMkg';
+            const model = 'gemini-1.5-flash';
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${GEMINI_API_KEY}`;
+            
+            const base64ImageData = fileData.src.split(',')[1];
+
+            const payload = {
+                "contents": [{
+                    "parts": [
+                        { "text": "Analyze the provided image of a plant leaf. IMPORTANT: Your entire response must be a single, valid JSON object and nothing else. Do not wrap it in markdown or any other text. The JSON object must have these keys: 'disease_name' (string), 'summary' (string), 'precautions' (array of strings), and 'bounding_boxes' (array of objects, where each object has 'box' which is an array of 4 numbers [x_min, y_min, x_max, y_max] representing the bounding box, and a 'label' string). Ensure there are no trailing commas in any arrays or objects. If no disease is found, return a JSON object with null values for all keys." },
+                        { "inline_data": { "mime_type": "image/jpeg", "data": base64ImageData } }
+                    ]
+                }]
+            };
+
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (!response.ok) throw new Error(`API Error: ${response.statusText}`);
+
+                const data = await response.json();
+                const responseText = data.candidates[0].content.parts[0].text;
+                
+                let analysis = null;
+                try {
+                    // Find the JSON block within the response text, even if it's wrapped in markdown.
+                    const jsonMatch = responseText.match(/```json\n([\s\S]*?)\n```/);
+                    if (jsonMatch && jsonMatch[1]) {
+                        // If a markdown block is found, parse the content inside it.
+                        analysis = JSON.parse(jsonMatch[1].trim());
+                    } else {
+                        // Otherwise, assume the whole response is the JSON and try to parse it.
+                        analysis = JSON.parse(responseText.trim());
+                    }
+                } catch (e) {
+                    console.error("Failed to parse JSON from API response:", responseText, e);
+                    throw new Error("Could not understand the analysis from the AI. The format was incorrect.");
+                }
+
+                updateResultCard(resultCardId, analysis, fileData.src);
+
+            } catch (error) {
+                const errorHtml = `<h3>Analysis Failed</h3><p>${error.message}</p>`;
+                document.querySelector(`#${resultCardId} .result-details-content`).innerHTML = errorHtml;
+            }
+        }
+
+        function createResultCard(id, imageSrc) {
+            const card = document.createElement('div');
+            card.className = 'result-card';
+            card.id = id;
+            card.style.display = 'grid';
+            card.innerHTML = `
+                <div class="result-image-view">
+                    <canvas id="canvas-${id}"></canvas>
+                    <div class="segmentation-controls">
+                        <button class="active" onclick="toggleSegmentation('${id}', 'segmented')">Segmented</button>
+                        <button onclick="toggleSegmentation('${id}', 'contrast')">Contrast</button>
+                        <button onclick="toggleSegmentation('${id}', 'original')">Original</button>
+                    </div>
+                </div>
+                <div class="result-details">
+                    <h3>Analysis Report</h3>
+                    <div class="result-details-content">
+                        <div class="spinner-container"><div class="spinner"></div></div>
+                    </div>
+                </div>
+            `;
+            resultsContainer.appendChild(card);
+        }
+
+        function updateResultCard(id, analysis, imageSrc) {
+            const card = document.getElementById(id);
+            const detailsContent = card.querySelector('.result-details-content');
+
+            if (!analysis || !analysis.disease_name) {
+                detailsContent.innerHTML = '<h4>No Disease Detected</h4><p>The analysis did not find any clear signs of disease on this plant.</p>';
+            } else {
+                detailsContent.innerHTML = `
+                    <h4>${analysis.disease_name}</h4>
+                    <p>${analysis.summary}</p>
+                    <h4>Precautions</h4>
+                    <ul>
+                        ${analysis.precautions.map(p => `<li>${p}</li>`).join('')}
+                    </ul>
+                `;
+            }
+            
+            // Initial render of the segmented image
+            toggleSegmentation(id, 'segmented', { analysis, imageSrc });
+        }
+
+        function toggleSegmentation(id, type, data = null) {
+            const canvas = document.getElementById(`canvas-${id}`);
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            // If data is passed, it's the first time rendering for this card
+            const imageSrc = data ? data.imageSrc : document.querySelector(`#${id} .result-image-view`).dataset.originalSrc;
+            const analysis = data ? data.analysis : JSON.parse(document.querySelector(`#${id} .result-details-content`).dataset.analysis);
+            
+            if (data) {
+                 document.querySelector(`#${id} .result-image-view`).dataset.originalSrc = imageSrc;
+                 document.querySelector(`#${id} .result-details-content`).dataset.analysis = JSON.stringify(analysis);
+            }
+
+            img.onload = () => {
+                canvas.width = img.width;
+                canvas.height = img.height;
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                ctx.drawImage(img, 0, 0);
+
+                if (type === 'contrast') {
+                    ctx.filter = 'contrast(1.8) brightness(1.1)';
+                    ctx.drawImage(img, 0, 0);
+                    ctx.filter = 'none'; // Reset filter
+                } else if (type === 'segmented' && analysis && analysis.bounding_boxes) {
+                    ctx.strokeStyle = 'rgba(255, 0, 0, 1)'; // Red line
+                    ctx.lineWidth = 2;
+                    ctx.font = "16px Arial";
+                    ctx.fillStyle = "red";
+
+                    analysis.bounding_boxes.forEach(item => {
+                        const box = item.box;
+                        const label = item.label;
+                        const x_min = box[0];
+                        const y_min = box[1];
+                        const width = box[2] - box[0];
+                        const height = box[3] - box[1];
+                        
+                        ctx.strokeRect(x_min, y_min, width, height);
+                        ctx.fillText(label, x_min, y_min > 10 ? y_min - 5 : y_min + 15);
+                    });
+                }
+            };
+            img.src = imageSrc;
+
+            // Update active button state
+            const buttons = document.querySelectorAll(`#${id} .segmentation-controls button`);
+            buttons.forEach(b => b.classList.remove('active'));
+            document.querySelector(`#${id} .segmentation-controls button[onclick*="'${type}'"]`).classList.add('active');
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', function() {
+            if (window.innerWidth > 768) {
+                document.getElementById('sidebar').classList.remove('open');
+            }
+        });
+
+        // Auto-focus input on mobile when keyboard appears
+        document.getElementById('messageInput').addEventListener('focus', function() {
+            if (window.innerWidth <= 768) {
+                setTimeout(() => {
+                    this.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 300);
+            }
+        });
+    </script>
+</body>
+</html>

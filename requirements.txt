@@ -1,0 +1,12 @@
+qdrant-client
+PyMuPDF
+langchain
+sentence-transformers
+torch
+transformers
+Pillow
+openai
+python-dotenv
+tqdm
+fastapi
+uvicorn
