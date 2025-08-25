@@ -2,7 +2,7 @@
 
 This project implements a production-ready, multimodal Retrieval-Augmented Generation (RAG) system for analyzing agricultural documents. It processes PDFs to extract both text and images, stores their vector embeddings in a Qdrant Cloud database, and uses an NVIDIA NIM to answer user queries through a web-based interface.
 
-![UI Screenshot](https://raw.githubusercontent.com/likhith1409/Agri-RAG/main/assets/UI.png)
+![UI Screenshot](https://github.com/user-attachments/assets/d1843d85-ae3c-4c47-bcc6-14cedc626df8)
 
 ## Table of Contents
 
